@@ -1,0 +1,6 @@
+*
+!*.tex
+!*.java
+!img/
+!img/*
+!.gitignore
