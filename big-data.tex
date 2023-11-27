@@ -13,7 +13,7 @@
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
 
-\lstset{frame=tb,
+\lstdefinestyle{java}{frame=tb,
 	language=Java,
 	aboveskip=3mm,
 	belowskip=3mm,
@@ -28,6 +28,17 @@
 	breaklines=true,
 	breakatwhitespace=true,
 	tabsize=4
+}
+\lstdefinestyle{bash}{
+	language=bash,
+	columns=flexible,
+	basicstyle={\small\ttfamily},
+	keywordstyle=\color{blue},
+	commentstyle=\color{dkgreen},
+	stringstyle=\color{mauve},
+	breakatwhitespace=true,
+	tabsize=2,
+	breaklines=true
 }
 
 \graphicspath{img}
@@ -158,17 +169,24 @@
 	\chapter{Progettazione di algoritmi e strutture dati}
 	\chapter{Laboratorio con Hadoop}
 	\section{Lab 1}
-	\lstinputlisting[label=code:wordcount, caption={classe WordCounter}]{WordCount.java}
+	\lstinputlisting[label=code:wordcount, caption={classe wordcount},style=java]{WordCount.java}
 	Le classi che sono d'interesse maggiore:
 	\begin{itemize}
 		\item La classe \textbf{Map} (linee 44-55) estende Mapper;
 		\item La classe \textbf{Reduce} (linee 57-70) estende Reducer.
 	\end{itemize}
 	\newpage
-	
+	\subsection{Analisi di main}
+	Fare riferimento al codice \ref{code:wordcount-main}.
+	\lstinputlisting[firstline=20,lastline=23,label=code:wordcount-main, caption={metodo main della classe WordCount},style=java]{WordCount.java}
+	Il metodo main esegue il metodo run del ToolRunner e ritorna lo stato (0 = riuscito, 1 = errore).
+	\subsection{Analisi di run}
+	Fare riferimento al codice \ref{code:wordcount-run}.
+	\lstinputlisting[firstline=25, lastline=37, label=code:wordcount-run, caption={metodo run della classe WordCount},style=java]{WordCount.java}
+	Il metodo run si occupa di impostare il job (linee 2 e 3), le directory da cui leggere e su cui scrivere l'elaborazione sui dati (linee 6 e 7), le classi Mapper e Reducer, le classi chiave valore e ritorna un intero che corrisponde all'esito dell'elaborazione.
 		\subsection{Analisi di Map}
-		Fare riferimento al codice \ref{code:wordcounter-map}.
-		\lstinputlisting[firstline=39,lastline=55,label=code:wordcounter-map,caption=classe Map di WordCount]{WordCount.java}
+		Fare riferimento al codice \ref{code:wordcount-map}.
+		\lstinputlisting[firstline=39,lastline=55,label=code:wordcount-map,caption=classe Map di WordCount,style=java]{WordCount.java}
 		\begin{itemize}
 			\item (LongWritable, Text): è la coppia chiave-valore in input al Mapper (che è il file di testo da analizzare). Il file viene suddiviso in righe dal FileInputReader e invia ciascuna riga al Mapper. LongWritable (chiave) è l'offset della riga rispetto all'inizio del file e Text (valore) è la riga da analizzare che viene passata al Mapper.
 			\item (Text, IntWritable): è la coppia chiave-valore in output dal Mapper. Text corrisponde ad una parola della riga da conteggiare e che è stata precedentemente passata in input. Il valore è il conteggio della parola (restituisce 1 nel caso che andiamo a considerare perché non è nel nostro interesse salvare risorse).
@@ -186,7 +204,7 @@
 		Alla linea 7 viene salvato il valore di lineText (di tipo Text) in un tipo String. È importante ricordare che non possono essere utilizzati i tipi del framework nell'implementazione dell'algoritmo. Questo segue l'idea di lasciare al programmatore il compito di implementare solamente nel linguaggio familiare di Java (e non quello del framework) le funzionalità delle classi Map e Reduce.
 		
 		Nelle linee successive (6-14) viene utilizzato l'oggetto Pattern WORD BOUNDARY per estrapolare dalla linea corrente (line) le parole che la compongono, facendo attenzione a controllare che siano diverse dalla stringa vuota. Notare che 
-		\begin{lstlisting}
+		\begin{lstlisting}[style=java]
 			WORD_BOUNDARY.split(line)
 		\end{lstlisting}
 		dentro al foreach restituisce un iteratore sulla lista di parole che compongono la linea corrente.
@@ -194,6 +212,15 @@
 		Fare l'emit significa restituire chiamare il metodo write sull'oggetto context (corrisponde a restituire il risultato dell'oggetto Map al framework).
 		
 		\subsection{Analisi di Reduce}
-		\lstinputlisting[label=wordcounter-reduce, caption=classe Reduce di WordCount, firstline=56,lastline=69]{WordCount.java}
-		Fare riferimento al codice \ref{wordcounter-reduce}
+		Fare riferimento al codice \ref{wordcount-reduce}.
+		\lstinputlisting[label=wordcount-reduce, caption=classe Reduce di WordCount, firstline=56,lastline=69, style=java]{WordCount.java}
+		
+		Nella classe reduce viene dichiarato un oggetto finalSum di tipo IntWritable che conterrà la somma di tutti i conteggi. Il metodo reduce prende una parola (word), i conteggi (counts) e il context. Viene eseguito un ciclo foreach (linea 8-10) dove viene accumulato il conteggio dei valori 1 e salvato nella variabile sum. Infine il conteggio viene salvato in finalSum e il risultato viene emesso con il metodo write di context al quale vengono passati la parola corrente e il conteggio finale.
+		Notare che il valore restituito alla linea 9 del count è sempre 1 perché nel codice \ref{code:wordcount-map} alla linea 13 abbiamo volutamente impostato il valore uno.
+		\subsection{Eseguire il codice}
+		Per eseguire il codice è necessario dare il comando seguente:
+		\begin{lstlisting}[style=bash]
+			hadoop jar landingJars/wordcount.jar hadoop.wordcount.WordCount /user/cloudera/wordcount/input /user/cloudera/wordcount/output 1
+		\end{lstlisting}
+		Hadoop estrae il jar, esegue il job della classe WordCount (hadoop.wordcount è un package e il nome è scelto arbitrariamente). Vengono specificate le cartelle di input (dove vengono inseriti i file di testo da analizzare - nel nostro caso) e di output. Infine il numero 1 indica che viene scelto di assegnare il job a 1 Mapper e 1 Reducer. In questo caso non cè alcuna parallelizzazione. Se al posto di 1 fosse stato specificato 3, il job verrebbe suddiviso tra 3 Mapper e 3 Reducer. Il numero di file prodotti nella cartella di output in questo caso sarebbero 3.
 \end{document}	
